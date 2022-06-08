@@ -101,7 +101,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     MixMultiInstrument() if is_polyphony else Identity(),
                     RandomInstrument(is_train) if not(is_polyphony) else Identity(),
-                    RandomCrop(ctxt_size, fraction, model_name, is_train),  #fraction=1 es pq no hay split_size, cada measures un elemento del arreglo de data *buscar mejor nombre*
+                    RandomCrop(ctxt_size, split_size, model_name, is_train),  #fraction=1 es pq no hay split_size, cada measures un elemento del arreglo de data *buscar mejor nombre*
                     AssignBarNumbers(ctxt_size),
                     RandomTranspose(bounds, representation, is_data_augmentation and is_train), #TODO: bounds por min/max en el dataset (habria que construirlo mientras se hacen los frames) 
                     PadWords(fraction),
