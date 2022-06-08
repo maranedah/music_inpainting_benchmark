@@ -57,6 +57,7 @@ class MidiDataset:
 
 def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str, path: str, repeat: int, is_polyphony = False):
     is_train = split == "train"
+    is_data_augmentation = True
     metadata = df[df["set"] == split]
         
     if model_name in ["vae_SKETCHNET", "vae_GRU_VAE"]:
@@ -69,7 +70,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                 TensorRepresentation(filter_instruments=None),
                 RandomInstrument(is_train),
                 RandomCrop(ctxt_size, fraction, model_name, is_train),
-                RandomTranspose(bounds, representation, is_train),  
+                RandomTranspose(bounds, representation, is_data_augmentation and is_train),  
                 Factorize((1,))
             ]
         )
@@ -84,7 +85,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                 TensorRepresentation(filter_instruments=None),
                 RandomInstrument(is_train),
                 RandomCrop(ctxt_size, fraction, model_name, is_train),
-                RandomTranspose(bounds, representation, is_train),  
+                RandomTranspose(bounds, representation, is_data_augmentation and is_train),  
                 Factorize(ctxt_split=(6, 4, 6), split_size=fraction)
             ]
         )
@@ -95,31 +96,19 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
         ctxt_size = 16
         representation = "remi"
         bounds=(0,127)
-        if is_train:
-            transform = Compose(
-                    [
-                        TensorRepresentation(filter_instruments=None),
-                        #MixMultiInstrument() if is_polyphony else Identity(),
-                        #RandomInstrument(is_train) if not(is_polyphony) else Identity(),
-                        RandomCrop(ctxt_size=16, fraction=1, model_name=model_name, is_train=is_train),  #fraction=1 es pq no hay split_size, cada measures un elemento del arreglo de data *buscar mejor nombre*
-                        AssignBarNumbers(ctxt_size=16),
-                        RandomTranspose(bounds=(0,127), representation="remi", is_train=is_train), #TODO: bounds por min/max en el dataset (habria que construirlo mientras se hacen los frames) 
-                        PadWords(fraction=16),
-                        
-                    ]
-                )
-        else:
-            transform = Compose(
-                    [
-                        TensorRepresentation(filter_instruments=None),
-                        MixMultiInstrument() if is_polyphony else Identity(),
-                        DeterministicInstrument() if not(is_polyphony) else Identity(),
-                        DeterministicCrop(ctxt_size=16, fraction=1, model_name=model_name),  #fraction=1 es pq no hay split_size, cada measures un elemento del arreglo de data *buscar mejor nombre*
-                        AssignBarNumbers(ctxt_size=16),
-                        PadWords(fraction=16),
-                    ]
-                )            
-            
+        transform = Compose(
+                [
+                    TensorRepresentation(filter_instruments=None),
+                    MixMultiInstrument() if is_polyphony else Identity(),
+                    RandomInstrument(is_train) if not(is_polyphony) else Identity(),
+                    RandomCrop(ctxt_size, fraction, model_name, is_train),  #fraction=1 es pq no hay split_size, cada measures un elemento del arreglo de data *buscar mejor nombre*
+                    AssignBarNumbers(ctxt_size),
+                    RandomTranspose(bounds, representation, is_data_augmentation and is_train), #TODO: bounds por min/max en el dataset (habria que construirlo mientras se hacen los frames) 
+                    PadWords(fraction),
+                    
+                ]
+            )
+        
     elif model_name == "vae_INPAINTNET":
         fraction = 24
         ctxt_size = 1
@@ -130,6 +119,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     RandomInstrument(is_train),
                     RandomCrop(ctxt_size, fraction, model_name, is_train),
+                    RandomTranspose(bounds, representation, is_data_augmentation and is_train),
                     Squeeze(dim=0) 
                 ]
             )
@@ -144,6 +134,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     RandomInstrument(is_train),
                     RandomCrop(ctxt_size, fraction, model_name, is_train),
+                    RandomTranspose(bounds, representation, is_data_augmentation and is_train),
                     Squeeze(dim=0) 
                 ]
             )
@@ -158,6 +149,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     RandomInstrument(is_train),
                     RandomCrop(ctxt_size, fraction, model_name, is_train), 
+                    RandomTranspose(bounds, representation, is_data_augmentation and is_train),
                 ]
             )
 
