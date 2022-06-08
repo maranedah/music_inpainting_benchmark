@@ -171,7 +171,8 @@ cython_debug/
 *.pyc 
 /models
 /data/external
-/data/generation
+/data/generated
 /data/interim
 /data/processed
 /data/raw
+/data/test
