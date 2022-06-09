@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
-
+from torch.optim.lr_scheduler import CyclicLR
+import pytorch_lightning as pl
+from torch.nn import functional as F
 
 # Definir la red
 class GRU_VAE(nn.Module):
@@ -152,3 +154,94 @@ class GRU_VAE(nn.Module):
                 for name, param in self._modules[layer].named_parameters():
                     if 'weight' in name:
                         nn.init.xavier_normal_(param)
+
+
+class LitGRU_VAE(GRU_VAE, pl.LightningModule):
+    def __init__(
+        self,
+        zp_dims, 
+        zr_dims, 
+        pf_num,
+        inpaint_len, 
+        gen_dims, 
+        vae_model,
+        learn_rate: float,
+        batch_size: int,
+        sch_factor: float,
+        sch_step: int,
+        sch_mode: str,
+        sch_gamma: float,
+        sch_momentum: bool,
+    ) -> None:
+        super(GRU_VAE, self).__init__()
+        super(LitGRU_VAE, self).__init__(zp_dims, zr_dims, pf_num, inpaint_len, gen_dims, vae_model)
+        self.learn_rate = learn_rate
+        self.batch_size = batch_size
+        self.sch_factor = sch_factor
+        self.sch_step = sch_step
+        self.sch_mode = sch_mode
+        self.sch_gamma = sch_gamma
+        self.sch_momentum = sch_momentum
+        self.save_hyperparameters()
+
+        self.loss_fn = F.cross_entropy
+
+    def training_step(self, batch, batch_idx):
+        d, _ = batch
+        label = d["inpaint_gd_whole"]
+        recon_x = self(d["past_x"], d["future_x"], d["middle_x"])
+        loss = self.loss_fn(recon_x.view(-1, recon_x.size(-1)), label.view(-1), reduction = "mean")
+        self.log(
+            "train_loss",
+            loss,
+            on_epoch=True,
+            on_step=False,
+            batch_size=self.batch_size,
+        )
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        d, _ = batch
+        label = d["inpaint_gd_whole"]
+        recon_x = self(d["past_x"], d["future_x"], d["middle_x"])
+        return recon_x.view(-1, recon_x.size(-1)), label.view(-1)
+
+    def validation_epoch_end(self, val_step_outputs):
+        """
+        Computes losses or metrics on validation dataloader
+        when epoch ends.
+        val_step_outputs: list of validation_step outputs during the epoch
+        """
+        model_out, labels = zip(*val_step_outputs)
+        model_out = torch.cat(model_out)
+        labels = torch.cat(labels)
+        val_loss = self.loss_fn(model_out, labels)
+        self.log("val_loss", val_loss)
+
+        # Validation metrics
+        # ...
+
+        return val_loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.learn_rate)
+        print(type(self.learn_rate), type(self.sch_factor))
+        scheduler = CyclicLR(
+            optimizer,
+            base_lr=self.learn_rate,
+            max_lr=self.learn_rate * self.sch_factor,
+            step_size_up=self.sch_step,
+            mode=self.sch_mode,
+            gamma=self.sch_gamma,
+            cycle_momentum=self.sch_momentum,
+        )
+        return (
+            {
+                "optimizer": optimizer,
+                "lr_scheduler_config": {
+                    "scheduler": scheduler,
+                    "interval": "step",
+                    "monitor": "val_loss",
+                },
+            },
+        )

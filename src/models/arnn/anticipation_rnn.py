@@ -5,6 +5,8 @@ import random
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import ModuleList, Embedding
+from torch.optim.lr_scheduler import CyclicLR
+import pytorch_lightning as pl
 from tqdm import tqdm
 
 import torch.nn.functional as F
@@ -65,7 +67,6 @@ class AnticipationRNN(nn.Module):
         self.num_elements_per_metadata = [4] # metadatas = [TickMetadata(subdivision=4)] [metadata.num_values for metadata in self.chorale_dataset.metadatas]
         # must add the number of voices
         self.num_elements_per_metadata.append(1) #voices_ids = [0] #self.chorale_dataset.num_voices)
-        #print(self.num_elements_per_metadata)
         # embeddings for all metadata except unary constraints
         if not no_metadata:
             self.metadata_embeddings = ModuleList(
@@ -78,7 +79,6 @@ class AnticipationRNN(nn.Module):
         else:
             self.num_metadata = 0
         # nn hyper parameters
-        #print(self.metadata_embeddings)
         self.num_lstm_constraints_units = num_lstm_constraints_units
         self.dropout_input_prob = dropout_input_prob
         self.dropout_prob = dropout_prob
@@ -91,12 +91,7 @@ class AnticipationRNN(nn.Module):
             num_layers=self.num_layers,
             dropout=dropout_prob,
             batch_first=True)
-        #print("meta embed dim", self.metadata_embedding_dim)
-        #print("num metadata", self.num_metadata)
-        #print("note embed dime", self.note_embedding_dim)
-        #print("unary const", unary_constraint_size)
-        #print("lstm", self.lstm_constraint)
-
+         
         self.lstm_generation = nn.LSTM(
             input_size=self.note_embedding_dim + self.num_lstm_constraints_units,
             hidden_size=self.num_lstm_generation_units,
@@ -128,20 +123,6 @@ class AnticipationRNN(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         self.filepath = os.path.join('models/',
                                      self.__repr__())
-
-    def __repr__(self):
-        return f'AnticipationRNN(' \
-               f'{self.note_embedding_dim},' \
-               f'{self.metadata_embedding_dim},' \
-               f'{self.num_lstm_constraints_units},' \
-               f'{self.num_lstm_generation_units},' \
-               f'{self.num_units_linear},' \
-               f'{self.num_layers},' \
-               f'{self.dropout_input_prob},' \
-               f'{self.dropout_prob},' \
-               f'{self.unary_constraint},' \
-               f'{self.no_metadata}' \
-               f')'
 
     def generation(self,
                    tensor_chorale,
@@ -237,8 +218,7 @@ class AnticipationRNN(nn.Module):
             [cuda_variable(torch.zeros(batch_size, 1, self.note_embedding_dim)),
              x[:, :sequence_length - 1, :]
              ], 1)
-        #print(offset_seq.shape)
-
+        
         if self.dropout_input_prob > 0:
             offset_seq = self.drop_input(offset_seq)
 
@@ -247,18 +227,14 @@ class AnticipationRNN(nn.Module):
         hidden = self.init_hidden(batch_size=batch_size, type='generation')
 
         output_gen, hidden = self.lstm_generation(input, hidden)
-        #print(output_gen.shape)
-
+        
         # distributed NN on output
         weights = [F.relu(self.linear_1(time_slice))
                    for time_slice
                    in output_gen.split(split_size=1,
                                        dim=1)]
-        #print([len(weights), len(weights[0]), len(weights[0][0])])
         weights = torch.cat(weights, 1)
-        #print(weights.shape)
         weights = weights.view(batch_size, chorale_length, num_voices, self.num_units_linear)
-        #print(weights.shape)
         
         # CrossEntropy includes a LogSoftMax layer
         weights = [
@@ -266,9 +242,7 @@ class AnticipationRNN(nn.Module):
             for voice, linear_layer
             in zip(weights.split(split_size=1, dim=2), self.linear_ouput_notes)
         ]
-        #print([len(weights), len(weights[0]), len(weights[0][0]), len(weights[0][0][0])])
         weights = torch.stack(weights)
-        #print(weights.shape)
         return weights
 
     def drop_input(self, x):
@@ -280,13 +254,11 @@ class AnticipationRNN(nn.Module):
 
     def embed_chorale(self, chorale):
         separate_voices = chorale.split(split_size=1, dim=1)
-        #print("separate voice", separate_voices[0].shape)
         separate_voices = [
             embedding(voice[:, 0, :])[:, None, :, :]
             for voice, embedding
             in zip(separate_voices, self.note_embeddings)
         ]
-        #print(separate_voices[0].shape)
         x = torch.cat(separate_voices, 1)
         x = self.flatten_chorale(chorale=x)
         return x
@@ -305,7 +277,6 @@ class AnticipationRNN(nn.Module):
         idx = [i for i in range(flat_embedded_metadata.size(1) - 1, -1, -1)]
         idx = torch.Tensor(idx).long().to(torch.cuda.current_device())#cuda_variable(torch.LongTensor(idx))
         flat_embedded_metadata = flat_embedded_metadata.index_select(1, idx)
-        #print(flat_embedded_metadata.shape, hidden[0].shape)
         output_constraints, hidden = self.lstm_constraint(flat_embedded_metadata, hidden)
         output_constraints = output_constraints.index_select(1, idx)
         return output_constraints
@@ -322,10 +293,6 @@ class AnticipationRNN(nn.Module):
             m = self.flatten_metadata(metadata=metadata)
             separate_metadatas = m.split(split_size=1,
                                          dim=2)
-            #print("separate_metadata", separate_metadatas[0].shape)
-            #print("separate_metadata", separate_metadatas[0])
-            #print("num_metadata", num_metadatas)
-            #print(separate_metadatas)
             separate_metadatas = [
                 embedding(separate_metadata[:, :, 0])[:, :, None, :]
                 for separate_metadata, embedding
@@ -339,7 +306,6 @@ class AnticipationRNN(nn.Module):
         if chorale is not None:
             masked_chorale = self.mask_chorale(chorale,
                                                constraints_location=constraints_location)
-            #print(masked_chorale)
             masked_chorale_embed = self.embed_chorale(masked_chorale)
             if not self.no_metadata:
                 m = torch.cat([m, masked_chorale_embed], 2)
@@ -367,8 +333,6 @@ class AnticipationRNN(nn.Module):
         no_constraint = no_constraint[None, :, None]
         no_constraint = no_constraint.long().clone().repeat(batch_size, 1, chorale_length)
         no_constraint = cuda_variable(no_constraint)
-        #print("no_constraint", no_constraint.shape)
-        #print(no_constraint)
         return chorale * constraints_location + no_constraint * (1 - constraints_location)
 
     @staticmethod
@@ -598,3 +562,137 @@ class AnticipationRNN(nn.Module):
 
         score = self.chorale_dataset.tensor_chorale_to_score(tensor_chorale=gen_chorale)
         return score, gen_chorale, tensor_metadata
+
+
+class LitAnticipationRNN(AnticipationRNN, pl.LightningModule):
+    def __init__(
+        self,
+        note_embedding_dim: int,
+        metadata_embedding_dim: int, #30
+        num_lstm_constraints_units: int,
+        num_lstm_generation_units: int,
+        linear_hidden_size: int, #128
+        num_layers: int, #1
+        dropout_input_prob: float,
+        dropout_prob: float, #0.5
+        unary_constraint: bool,
+        no_metadata: bool,
+        learn_rate: float,
+        batch_size: int,
+        sch_factor: float,
+        sch_step: int,
+        sch_mode: str,
+        sch_gamma: float,
+        sch_momentum: bool,
+    ) -> None:
+        super(AnticipationRNN, self).__init__()
+        super(LitAnticipationRNN, self).__init__(
+            note_embedding_dim,
+            metadata_embedding_dim, #30
+            num_lstm_constraints_units,
+            num_lstm_generation_units,
+            linear_hidden_size, #128
+            num_layers, #1
+            dropout_input_prob,
+            dropout_prob, #0.5
+            unary_constraint,
+            no_metadata,
+        )
+        self.learn_rate = learn_rate
+        self.batch_size = batch_size
+        self.sch_factor = sch_factor
+        self.sch_step = sch_step
+        self.sch_mode = sch_mode
+        self.sch_gamma = sch_gamma
+        self.sch_momentum = sch_momentum
+        self.save_hyperparameters()
+
+        self.loss_fn = F.cross_entropy
+
+    def training_step(self, d, batch_idx):
+        subdivision = 4
+        num_voices = 1
+        metadata_tensor = torch.zeros(d.shape[0], d.shape[1], d.shape[2], 2)
+        metadata_content = torch.Tensor([subdivision,num_voices]) # [subdivision, num_voices]
+        metadata = metadata_tensor + metadata_content
+        metadata = metadata.long()
+
+        constraints_loc = torch.cat((torch.ones([64, 1, 24*6]), torch.zeros([64, 1, 24*4]), torch.ones([64, 1, 24*6])), dim=-1).long()
+        weights = self(
+            chorale=d, 
+            metadata=torch.zeros([64, 1, 384, 2]).long().cuda(),
+            constraints_loc=constraints_loc
+            )
+        weights = weights[:, :, 6*24:10*24, :]
+        targets = d.transpose(0,1)[:, :, 6*24:10*24]
+
+        loss = self.loss_fn(weights.reshape(-1, weights.size(-1)), targets.reshape(-1))
+        self.log(
+            "train_loss",
+            loss,
+            on_epoch=True,
+            on_step=False,
+            batch_size=self.batch_size,
+        )
+        return loss
+
+    def validation_step(self, d, batch_idx):
+        """
+        forward pass through self.model
+        """
+        subdivision = 4
+        num_voices = 1
+        metadata_tensor = torch.zeros(d.shape[0], d.shape[1], d.shape[2], 2)
+        metadata_content = torch.Tensor([subdivision,num_voices]) # [subdivision, num_voices]
+        metadata = metadata_tensor + metadata_content
+        metadata = metadata.long()
+
+        constraints_loc = torch.cat((torch.ones([64, 1, 24*6]), torch.zeros([64, 1, 24*4]), torch.ones([64, 1, 24*6])), dim=-1).long()
+        weights = self(
+            chorale=d, 
+            metadata=torch.zeros([64, 1, 384, 2]).long().cuda(),
+            constraints_loc=constraints_loc
+            )
+        weights = weights[:, :, 6*24:10*24, :]
+        targets = d.transpose(0,1)[:, :, 6*24:10*24]
+        return weights.reshape(-1, weights.size(-1)), targets.reshape(-1)
+
+    def validation_epoch_end(self, val_step_outputs):
+        """
+        Computes losses or metrics on validation dataloader
+        when epoch ends.
+        val_step_outputs: list of validation_step outputs during the epoch
+        """
+        model_out, labels = zip(*val_step_outputs)
+        model_out = torch.cat(model_out)
+        labels = torch.cat(labels).to(torch.half)
+        val_loss = self.loss_fn(model_out, labels)
+        self.log("val_loss", val_loss)
+
+        # Validation metrics
+        # ...
+
+        return val_loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.learn_rate)
+        print(type(self.learn_rate), type(self.sch_factor))
+        scheduler = CyclicLR(
+            optimizer,
+            base_lr=self.learn_rate,
+            max_lr=self.learn_rate * self.sch_factor,
+            step_size_up=self.sch_step,
+            mode=self.sch_mode,
+            gamma=self.sch_gamma,
+            cycle_momentum=self.sch_momentum,
+        )
+        return (
+            {
+                "optimizer": optimizer,
+                "lr_scheduler_config": {
+                    "scheduler": scheduler,
+                    "interval": "step",
+                    "monitor": "val_loss",
+                },
+            },
+        )

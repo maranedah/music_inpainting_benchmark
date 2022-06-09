@@ -176,3 +176,4 @@ cython_debug/
 /data/processed
 /data/raw
 /data/test
+/mlruns
