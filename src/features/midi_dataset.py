@@ -4,7 +4,6 @@ import os
 from .encoded_midi import EncodedMidi
 from .transforms.Compose import Compose
 from .transforms.RandomCrop import RandomCrop
-from .transforms.DeterministicCrop import DeterministicCrop
 from .transforms.RandomTranspose import RandomTranspose
 from .transforms.Factorize import Factorize
 from .transforms.MixMultiInstrument import MixMultiInstrument
@@ -12,9 +11,9 @@ from .transforms.RandomInstrument import RandomInstrument
 from .transforms.PadWords import PadWords
 from .transforms.TensorRepresentation import TensorRepresentation
 from .transforms.AssignBarNumbers import AssignBarNumbers
-from .transforms.DeterministicInstrument import DeterministicInstrument
 from .transforms.Identity import Identity
 from .transforms.Squeeze import Squeeze
+from .transforms.FixEmptyPitches import FixEmptyPitches
 
 class MidiDataset:
     def __init__(
@@ -70,6 +69,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                 TensorRepresentation(filter_instruments=None),
                 RandomInstrument(is_train),
                 RandomCrop(ctxt_size, fraction, model_name, is_train),
+                FixEmptyPitches(fraction),
                 RandomTranspose(bounds, representation, is_data_augmentation and is_train),  
                 Factorize((1,))
             ]
@@ -85,6 +85,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                 TensorRepresentation(filter_instruments=None),
                 RandomInstrument(is_train),
                 RandomCrop(ctxt_size, fraction, model_name, is_train),
+                FixEmptyPitches(fraction),
                 RandomTranspose(bounds, representation, is_data_augmentation and is_train),  
                 Factorize(ctxt_split=(6, 4, 6), split_size=fraction)
             ]
@@ -119,6 +120,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     RandomInstrument(is_train),
                     RandomCrop(ctxt_size, fraction, model_name, is_train),
+                    FixEmptyPitches(fraction),
                     RandomTranspose(bounds, representation, is_data_augmentation and is_train),
                     Squeeze(dim=0) 
                 ]
@@ -134,6 +136,7 @@ def get_dataset(model_name: str, dataset_name: str, df: pd.DataFrame, split: str
                     TensorRepresentation(filter_instruments=None),
                     RandomInstrument(is_train),
                     RandomCrop(ctxt_size, fraction, model_name, is_train),
+                    FixEmptyPitches(fraction),
                     RandomTranspose(bounds, representation, is_data_augmentation and is_train),
                     Squeeze(dim=0) 
                 ]

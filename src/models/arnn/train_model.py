@@ -26,6 +26,8 @@ MODELS_DIR = os.path.join(PROJECT_DIR, "models")
 def init_model(args):
     model = AnticipationRNN()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+    #optimizer = optim.AdamW(model.parameters(), lr=0.0001)
+    #scheduler = CyclicLR(optimizer, base_lr=0.0001, max_lr=0.0006, step_size_up=600, step_size_down=2000, mode='exp_range', gamma=0.9997, cycle_momentum=False)
     
     model_path = os.path.join(MODELS_DIR, f"{args.model}_{args.dataset}.pt")
     

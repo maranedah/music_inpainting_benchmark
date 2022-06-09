@@ -20,15 +20,6 @@ class RandomCrop:
         max_index = min_index + self.fraction*self.ctxt_size
         data = np.array(data)
         ctxt = data[:,min_index:max_index]
-        if self.model_name in ["SKETCHNET", "vae_SKETCHNET", "vae_INPAINTNET"]:
-            ctxt = self.fix_empty_pitches(ctxt)
         
         return ctxt
 
-    def fix_empty_pitches(self, data):
-        n = len(data[0])//self.fraction
-        for i in range(n):
-            measure = data[0][i*self.fraction:(i+1)*self.fraction]
-            if len(measure[measure<128]) == 0:
-                data[0][i*self.fraction] = 60
-        return data
