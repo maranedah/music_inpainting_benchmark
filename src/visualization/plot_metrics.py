@@ -1,8 +1,14 @@
 import plotly.express as px
 import numpy as np
 import pandas as pd
+import os
+from pathlib import Path
 
-df = pd.read_csv('data.csv')
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
+
+results_path =  os.path.join(RESULTS_DIR, "metrics_results.csv")
+df = pd.read_csv(results_path)
 def get_plot(metric, name):
 	fig = px.bar(
 			df, 
@@ -24,7 +30,7 @@ def get_plot(metric, name):
 	    font=dict(size=18),
 	    showlegend=False
 	)
-	fig.write_image(f"images/{metric}.svg")
+	fig.write_image(os.path.join(RESULTS_DIR, f"images/{metric}.svg"))
 
 metrics = ['pos_f1', 'pAcc', 'rAcc', 'sdiv', 'hdiv', 'gsdiv']
 names = ['Position Score', 'Pitch Accuracy', 'Rhythm Accuracy', 'Silence Divergence', 'Pitch Class Divergence', 'Groove Similarity Divergence']

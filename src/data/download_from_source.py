@@ -21,12 +21,26 @@ def create_folders():
     if not os.path.exists(INTERIM_DIR): os.mkdir(INTERIM_DIR) 
     if not os.path.exists(PROCESSED_DIR): os.mkdir(PROCESSED_DIR) 
 
+def download_progress_bar(url, out_file):
+    r = requests.get(url, stream=True)
+    total_size_in_bytes= int(r.headers.get('content-length', 0))
+    block_size = 1024 #1 Kibibyte
+    progress_bar = tqdm(r.iter_content(), total=total_size_in_bytes, unit='iB', unit_scale=True)
+    with open(out_file, 'wb') as file:
+        for data in r.iter_content(block_size):
+            progress_bar.update(len(data))
+            file.write(data)
+    progress_bar.close()
+    if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
+        print("ERROR, something went wrong")
+
     
 def download_files(dataset_name, url, path, file_format, compression_format, gdownload=False, subdirectories=True):
     OUTPUT_FILE = os.path.join(RAW_DIR, f"{dataset_name}{compression_format}")
     if not gdownload:
         r = requests.get(url)
-        open(OUTPUT_FILE, 'wb').write(r.content)
+        download_progress_bar(url, OUTPUT_FILE)
+        #open(OUTPUT_FILE, 'wb').write(r.content)
     else:
         gdown.download(url, OUTPUT_FILE, quiet=False)
 
@@ -38,15 +52,14 @@ def download_files(dataset_name, url, path, file_format, compression_format, gdo
 
     shutil.unpack_archive(OUTPUT_FILE, extract_dir=TEMP_DIR)
     for root, subdirs, files in tqdm(os.walk(TEMP_DIR)):
-        if subdirectories and len(subdirs)==0: 
-            [
-                shutil.move(
-                    os.path.join(root, file), 
-                    os.path.join(OUTPUT_DIR, file)
-                )
-                for file in files 
-                if path in root and file_format in file
-            ]
+        [
+            shutil.move(
+                os.path.join(root, file), 
+                os.path.join(OUTPUT_DIR, file)
+            )
+            for file in files 
+            if path in root and file_format in file
+        ]
     shutil.rmtree(TEMP_DIR)    
     os.remove(OUTPUT_FILE)
 
