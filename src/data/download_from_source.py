@@ -1,12 +1,11 @@
 import logging
-from pathlib import Path
 import requests
 import os
-import zipfile
 import shutil
 import gdown
 import json
 from tqdm import tqdm
+from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
