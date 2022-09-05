@@ -1,0 +1,9 @@
+Model,Dataset,pos_f1,pAcc,rAcc,sdiv,hdiv,gsdiv
+ARNN,IrishFolkSong,0.930,0.657,0.860,0.017,0.060,0.007
+InpaintNet,IrishFolkSong,0.860,0.517,0.750,0.013,0.174,0.024
+SketchNet,IrishFolkSong,0.914,0.560,0.868,0.005,0.134,0.009
+VLI,IrishFolkSong,0.968,0.911,0.965,0.015,0.010,0.006
+ARNN,JSBChorales,0.832,0.243,0.682,0.240,0.525,0.232
+InpaintNet,JSBChorales,0.852,0.505,0.788,0.059,0.411,0.153
+SketchNet,JSBChorales,0.833,0.272,0.708,0.079,0.529,0.228
+VLI,JSBChorales,0.827,0.283,0.747,0.087,0.286,0.306
