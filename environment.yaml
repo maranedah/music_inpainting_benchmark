@@ -1,0 +1,12 @@
+name: musib
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip=22
+  - numpy=1.23.1
+  - mlflow==1.27.0
+  - pip:
+    - muspy==0.5.0
+    - pandas==1.4.3
+    - tqdm==4.64.0

@@ -33,9 +33,47 @@ RAW_DIR = os.path.join(DATA_DIR, "raw")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 INTERIM_DIR = os.path.join(DATA_DIR, "interim")
 
+class Note():
+    def __init__(self, row, ticks_per_note):
+        self.track = row["track"]
+        self.measure = row["measure"]
+        self.rel_pos = round(row["relative_position"] * ticks_per_note)
+        self.duration = round(row["duration"] * ticks_per_note)
+        self.pitch = row["pitch"]
+        self.velocity = row["velocity"]
+        self.tempo = row["tempo"]
 
-def to_noteseq(df):
-    pass
+    def to_noteseq(self):
+        return [self.pitch] + [128]*(self.duration-1)
+
+    def to_vli(self):
+        return [self.measure, self.relative_position, self.duration, self.pitch, self.velocity, self.tempo]
+
+def to_noteseq(df, ticks_per_note):
+    seqs = []
+    overflow = []
+    for keys, indexs in df.groupby(by=["track", "measure"]).groups.items():
+        seq = [129 for _ in range(ticks_per_note*4)]
+        for note in  df.loc[indexs,].iterrows():
+            n = Note(note[1], ticks_per_note)
+            noteseq = n.to_noteseq()
+            # if noteseq se paso pal compas del lado?
+            i = 0
+            while len(overflow)>0:
+                if i >= ticks_per_note*4:
+                    break
+                else:    
+                    seq[i] = overflow.pop(0)
+                    i+=1
+            for i, ix in enumerate(range(n.rel_pos, n.rel_pos+n.duration)):
+                if ix >= ticks_per_note*4:
+                    overflow.append(noteseq[i])
+                else:
+                    seq[ix] = noteseq[i]
+
+        seqs.append(seq)
+    return seqs
+
 
 
 def main():
@@ -49,8 +87,9 @@ def main():
         for file in tqdm(os.listdir(interim_files)):
             path = os.path.join(interim_files, file) 
             df = pd.read_csv(path)
-            to_noteseq(df)
+            noteseq = to_noteseq(df, 6)
             breakpoint()
+            
 
 
 

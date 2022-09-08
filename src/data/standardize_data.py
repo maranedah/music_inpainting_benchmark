@@ -19,6 +19,7 @@ class StandardizedNote():
     def __init__(self, note, track, data, ticks_per_beat):
         self.track = track
         self.time = self.scaled_time(note, ticks_per_beat, data.resolution)
+        self.relative_position = self.rel_pos(note.time, ticks_per_beat, data.barlines, data.resolution)
         self.duration = self.scaled_duration(note, ticks_per_beat, data.resolution)
         self.pitch = note.pitch
         self.velocity = note.velocity 
@@ -32,10 +33,10 @@ class StandardizedNote():
         return measure
 
     def scaled_time(self, note, ticks_per_beat, resolution):
-        return round(note.time*ticks_per_beat/resolution)
+        return round(note.time*ticks_per_beat/resolution)/ticks_per_beat
 
     def scaled_duration(self, note, ticks_per_beat, resolution):
-        return round(note.duration*ticks_per_beat/resolution)
+        return round(note.duration*ticks_per_beat/resolution)/ticks_per_beat
 
     def get_tempo(self, note, tempos):
         last_tempo = sorted([tempo for tempo in tempos if note.time>=tempo.time], key=lambda x: x.time)[-1]
@@ -46,7 +47,12 @@ class StandardizedNote():
         return last_ts.numerator, last_ts.denominator
 
     def get_ticks_per_measure(self, ticks_per_beat):
-        return int(self.time_signature[0]*ticks_per_beat*4/self.time_signature[1])
+        return int(self.time_signature[0]*4/self.time_signature[1])
+
+    def rel_pos(self, time, ticks_per_beat, barlines, resolution):
+        lower_time = [bar.time for bar in barlines if bar.time - time<=0][-1]
+        return round((time - lower_time)*ticks_per_beat/resolution)/ticks_per_beat
+
 
 
 
@@ -91,6 +97,7 @@ def main():
                     note.track,
                     note.measure,
                     note.time,
+                    note.relative_position,
                     note.duration,
                     note.pitch,
                     note.velocity,
@@ -107,6 +114,7 @@ def main():
                     "track",
                     "measure",
                     "time",
+                    "relative_position",
                     "duration",
                     "pitch",
                     "velocity",
@@ -116,12 +124,13 @@ def main():
                 ],
                 data=notes
             )
+            # Filters
+            if len(df["time_signature"].unique()) > 1 or not(df["time_signature"].unique().item() == "4/4"):
+                continue
+
+
             out_path = path = os.path.join(out_dir, f"{file.split('.')[0]}.csv")
             df.to_csv(out_path, index=False)
-
-
-            
-
 
 
 if __name__ == '__main__':

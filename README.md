@@ -93,52 +93,41 @@ metadata_tensor = tensor([[ 0,  0, 15,  0],
 Project Organization
 ------------
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
+    │   ├── interim        <- CSV data containing all notes coming from raw sources. Intermediate before vectorization.
+    │   ├── processed      <- Vectorization of data ready to feed the models.
+    │   └── raw            <- The original, immutable data dump.
     │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
+    ├── models             <- Trained models weights.
     │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    ├── results            <- Generated results, tables, csvs, etc.
+    │   └── images         <- Generated graphics and figures
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
+    ├── environment.yaml   <- Libraries and modules required by the environment to reproduce the project.
     │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    |   |   ├── model_src  <- Original implementation of models
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
-
+    └── src                <- Source code for use in this project.
+        ├── __init__.py    <- Makes src a Python module
+        │
+        ├── data           <- Scripts to download or generate data
+        │   ├── download_from_souce.py
+        │   ├── standardize_data.py
+        │   └── process_data.py
+        │
+        ├── features       <- Scripts to turn raw data into features for modeling
+        │   └── build_features.py
+        │
+        ├── models         <- Scripts to train models and generate new data.
+        │   ├── sketchnet.py
+        │   ├── inpaintnet.py
+        │   ├── arnn.py
+        │   └── vli.py
+        │
+        ├── metrics         <- Scripts to calculation of metrics.
+        │
+        └── visualization  <- Scripts to create exploratory and results oriented visualizations
+            └── plot_metrics.py
+    
 
 --------
 
