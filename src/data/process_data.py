@@ -23,9 +23,10 @@ import pandas as pd
 import os
 import logging
 import json
-import numpy
+import numpy as np
 from pathlib import Path
 from tqdm import tqdm
+import pickle
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
@@ -44,20 +45,21 @@ class Note():
         self.tempo = row["tempo"]
 
     def to_noteseq(self):
-        return [self.pitch] + [128]*(self.duration-1)
+        return np.array([self.pitch] + [128]*(self.duration-1))
 
     def to_vli(self):
-        return [self.measure, self.relative_position, self.duration, self.pitch, self.velocity, self.tempo]
+        return np.array([self.measure, self.relative_position, self.duration, self.pitch, self.velocity, self.tempo])
 
 def to_noteseq(df, ticks_per_note):
-    seqs = []
     overflow = []
-    for keys, indexs in df.groupby(by=["track", "measure"]).groups.items():
+    groups = df.groupby(by=["track", "measure"]).groups.items()
+    tracks = [[] for x in range(list(groups)[-1][0][0] + 1)]
+    for keys, indexs in groups:    
         seq = [129 for _ in range(ticks_per_note*4)]
         for note in  df.loc[indexs,].iterrows():
             n = Note(note[1], ticks_per_note)
             noteseq = n.to_noteseq()
-            # if noteseq se paso pal compas del lado?
+            # if noteseq se paso pal compas del lado
             i = 0
             while len(overflow)>0:
                 if i >= ticks_per_note*4:
@@ -70,9 +72,8 @@ def to_noteseq(df, ticks_per_note):
                     overflow.append(noteseq[i])
                 else:
                     seq[ix] = noteseq[i]
-
-        seqs.append(seq)
-    return seqs
+        tracks[n.track].append(seq)
+    return np.array(tracks, dtype="object")
 
 
 
@@ -88,8 +89,8 @@ def main():
             path = os.path.join(interim_files, file) 
             df = pd.read_csv(path)
             noteseq = to_noteseq(df, 6)
-            breakpoint()
-            
+            out_path = os.path.join(out_dir, f"{file.split('.')[0]}.npy")
+            np.save(out_path, noteseq, allow_pickle=True, fix_imports=False)
 
 
 

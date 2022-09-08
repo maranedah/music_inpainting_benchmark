@@ -8,6 +8,7 @@ import json
 import numpy
 from pathlib import Path
 from tqdm import tqdm
+import hashlib
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
@@ -54,6 +55,13 @@ class StandardizedNote():
         return round((time - lower_time)*ticks_per_beat/resolution)/ticks_per_beat
 
 
+def get_hash(file_path):
+    md5_hash = hashlib.md5()
+    a_file = open(file_path, "rb")
+    content = a_file.read()
+    md5_hash.update(content)
+    digest = md5_hash.hexdigest()
+    return digest 
 
 
 
@@ -61,12 +69,18 @@ def main():
     logging.info('Creating necessary folders...')
     data_sources_file = open(os.path.join(RAW_DIR, "data_sources.json"), "r")
     sources = json.load(data_sources_file)
+    hashes = []
     for dataset, config in sources.items():
         raw_files = os.path.join(RAW_DIR, dataset)
         out_dir = os.path.join(INTERIM_DIR, dataset)
         if not os.path.exists(out_dir): os.mkdir(out_dir)
         for file in tqdm(os.listdir(raw_files)):
             path = os.path.join(raw_files, file)
+            hash_ = get_hash(path)
+            if hash_ not in hashes:
+                hashes.append(hash_)
+            else:
+                continue
             try:
                 if ".mxl" in file:
                     data = muspy.read_musicxml(path)
@@ -125,11 +139,15 @@ def main():
                 data=notes
             )
             # Filters
-            if len(df["time_signature"].unique()) > 1 or not(df["time_signature"].unique().item() == "4/4"):
+            if len(df) == 0 or len(df["time_signature"].unique()) > 1: 
+                continue
+            elif not(df["time_signature"].unique().item() == "4/4"):
+                continue
+            elif df["measure"].max().item() < 16:
                 continue
 
 
-            out_path = path = os.path.join(out_dir, f"{file.split('.')[0]}.csv")
+            out_path = os.path.join(out_dir, f"{file.split('.')[0]}.csv")
             df.to_csv(out_path, index=False)
 
 
