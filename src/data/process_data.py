@@ -76,6 +76,10 @@ def to_noteseq(df, ticks_per_note):
     return np.array(tracks, dtype="object")
 
 
+def to_vli(df, ticks_per_note):
+    pass
+
+
 
 def main():
     logging.info('Creating necessary folders...')
@@ -83,14 +87,24 @@ def main():
     sources = json.load(data_sources_file)
     for dataset, config in sources.items():
         interim_files = os.path.join(INTERIM_DIR, dataset)
-        out_dir = os.path.join(PROCESSED_DIR, dataset)
-        if not os.path.exists(out_dir): os.mkdir(out_dir)
+        dataset_dir = os.path.join(PROCESSED_DIR, dataset)
+        if not os.path.exists(dataset_dir): os.mkdir(dataset_dir)
         for file in tqdm(os.listdir(interim_files)):
             path = os.path.join(interim_files, file) 
             df = pd.read_csv(path)
-            noteseq = to_noteseq(df, 6)
-            out_path = os.path.join(out_dir, f"{file.split('.')[0]}.npy")
-            np.save(out_path, noteseq, allow_pickle=True, fix_imports=False)
+            noteseq_16 = to_noteseq(df, 4)
+            noteseq_24 = to_noteseq(df, 6)  
+            # TODO: Implementar to vli
+            vli_16 = to_vli(df, 4)
+            vli_24 = to_vli(df, 6)
+            data = [noteseq_16, noteseq_24, vli_16, vli_24]
+            formats = ["noteseq_16", "noteseq_24", "vli_16", "vli_24"]
+            for f, d in zip(formats, data):
+                out_dir = os.path.join(dataset_dir, f)
+                if not os.path.exists(out_dir): os.mkdir(out_dir)
+                out_path = os.path.join(out_dir, f"{file.split('.')[0]}.npy")
+                np.save(out_path, d, allow_pickle=True, fix_imports=False)
+            # Generar .csv con los splits que queden en /processed/<dataset>/splits.csv o quizas en /splits/<dataset>.csv
 
 
 
