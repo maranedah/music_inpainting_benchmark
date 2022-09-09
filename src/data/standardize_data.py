@@ -145,6 +145,9 @@ def main():
                 continue
             elif df["measure"].max().item() < 16:
                 continue
+            # Filtrar solo monofonias
+            #elif len(df["track", "time"].unique()) != len(df):
+            #    continue
 
 
             out_path = os.path.join(out_dir, f"{file.split('.')[0]}.csv")
