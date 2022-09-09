@@ -110,14 +110,14 @@ def make_split(interim_files, dataset, n_context):
             for measure in range(max_measures[track]):
 
                 measure_entry = {
-                    "filename": file,
+                    "filename": npy_file,
                     "track": track,
                     "measure": measure
                 }
                 measures.append(measure_entry)
                 if measure + n_context <= max_measures[track]:
                     context_entry = {
-                        "filename": f"{file.split('.')[0]}.npy",
+                        "filename": npy_file,
                         "track": track,
                         "measure_st": measure,
                         "measure_end": measure + n_context
