@@ -27,7 +27,7 @@ class Dataset:
         )
         
     def __len__(self):
-        return len(df)
+        return len(self.df)
 
     def __getitem__(self, idx):
         filename = self.df["filename"][idx]

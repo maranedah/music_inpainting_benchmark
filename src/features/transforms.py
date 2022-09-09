@@ -20,7 +20,6 @@ class FixEmptyMeasures:
         self.resolution = resolution
         
     def __call__(self, data):
-        breakpoint()
         n = len(data)//self.resolution
         for i in range(n):
             measure = data[i*self.resolution:(i+1)*self.resolution]
