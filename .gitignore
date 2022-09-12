@@ -168,7 +168,7 @@ cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-*.pyc 
+*.pyc
 /models
 /data/external
 /data/generated

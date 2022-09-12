@@ -1,15 +1,17 @@
-import pandas as pd
-import os 
-import numpy as np
-from .transforms import *
+import os
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from .transforms import Compose, Factorize, FixEmptyMeasures
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 SPLIT_DIR = os.path.join(DATA_DIR, "splits")
 
-
+transformations = {"Factorize": Factorize, "FixEmptyMeasures": FixEmptyMeasures}
 
 
 class Dataset:
@@ -23,19 +25,23 @@ class Dataset:
         self.resolution = resolution
         self.cache = {}
         self.transformations = Compose(
-            [globals()[tf["name"]](*tf["params"], resolution=resolution) for tf in transformations]
+            [
+                transformations[tf["name"]](*tf["params"], resolution=resolution)
+                for tf in transformations
+            ]
         )
-        
+
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
         filename = self.df["filename"][idx]
         track = self.df["track"][idx]
-        
 
-        file_path = os.path.join(PROCESSED_DIR, self.dataset, f"{self.format}_{self.resolution}", filename)
-        if not filename in self.cache:
+        file_path = os.path.join(
+            PROCESSED_DIR, self.dataset, f"{self.format}_{self.resolution}", filename
+        )
+        if filename not in self.cache:
 
             data = np.load(file_path, allow_pickle=True)
             if self.data_type == "measures":
@@ -52,5 +58,3 @@ class Dataset:
         else:
             data = self.cache[filename]
         return data
-
-

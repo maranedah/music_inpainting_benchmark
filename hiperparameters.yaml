@@ -17,11 +17,10 @@ arnn:
 inpaintnet:
   data_type: "contexts"
   format: "noteseq"
-  data_transformations: 
-    - 
+  data_transformations:
+    -
       name: "FixEmptyMeasures"
       params: []
-  data_transformations: []
   num_latent_rnn_layers: 2
   latent_rnn_hidden_size: 512
   latent_rnn_dropout_prob: 0.5
@@ -36,11 +35,11 @@ inpaintnet:
 measure_vae:
   data_type: "measures"
   format: "noteseq"
-  data_transformations: 
-    - 
+  data_transformations:
+    -
       name: "FixEmptyMeasures"
       params: []
-    
+
   note_embedding_dim: 10
   metadata_embedding_dim: 2
   num_encoder_layers: 2
@@ -60,15 +59,15 @@ measure_vae:
 sketchnet:
   data_type: "contexts"
   format: "noteseq"
-  data_transformations: 
-    - 
+  data_transformations:
+    -
       name: "FixEmptyMeasures"
       params: []
-    - 
+    -
       name: "Factorize"
       params:
         - [6,4,6]
-  
+
   zp_dims: 128
   zr_dims: 128
   pf_dims: 512
@@ -89,11 +88,11 @@ sketchnet:
 sketch_vae:
   data_type: "measures"
   format: "noteseq"
-  data_transformations: 
-    - 
+  data_transformations:
+    -
       name: "FixEmptyMeasures"
       params: []
-    - 
+    -
       name: "Factorize"
       params:
         - [1]
@@ -120,11 +119,11 @@ sketch_vae:
 sketch_vae_v2:
   data_type: "measures"
   format: "noteseq"
-  data_transformations: 
-    - 
+  data_transformations:
+    -
       name: "FixEmptyMeasures"
       params: []
-    - 
+    -
       name: "Factorize"
       params:
         - [1]
@@ -180,7 +179,7 @@ vli:
   data_type: "contexts"
   format: "remi"
   _name_or_path: "xlnet-predict-middle-notes"
-  architectures: 
+  architectures:
     - "XLNetLMHeadModel"
   attn_type: "bi"
   bi_data: False
@@ -218,4 +217,3 @@ vli:
   nucleus:
     p: 0.9
     t: 1.2
-
