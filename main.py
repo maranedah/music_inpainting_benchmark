@@ -27,9 +27,9 @@ train_set, val_set, test_set = [
         dataset, 
         hparams.data_type, 
         split, 
-        hparams.format_, 
+        hparams.format, 
         resolution, 
-        hparams.transformations
+        hparams.data_transformations
     )
     for split in ["train", "val", "test"]
 ]
@@ -53,7 +53,7 @@ if model == "sketch_vae":
         input_dims=hparams.input_dims, 
         p_input_dims=hparams.pitch_dims, 
         r_input_dims=hparams.rhythm_dims, 
-        hidden_dims=hparamshidden_dims, 
+        hidden_dims=hparams.hidden_dims, 
         zp_dims=hparams.zp_dims, 
         zr_dims=hparams.zr_dims,
         seq_len=hparams.seq_len, 
@@ -70,7 +70,7 @@ elif model == "sketch_vae_v2":
         input_dims=hparams.input_dims, 
         p_input_dims=hparams.pitch_dims, 
         r_input_dims=hparams.rhythm_dims, 
-        hidden_dims=hparamshidden_dims, 
+        hidden_dims=hparams.hidden_dims, 
         zp_dims=hparams.zp_dims, 
         zr_dims=hparams.zr_dims,
         seq_len=hparams.seq_len, 
@@ -112,7 +112,7 @@ trainer = pl.Trainer(
     logger=mlf_logger,
     gpus=[0],
     min_epochs=10,
-    gradient_clip_val=params.clip_grad
+    gradient_clip_val=hparams.clip_grad
 )
 
 trainer.fit(
