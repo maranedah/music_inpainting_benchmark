@@ -16,7 +16,7 @@ class Dataset:
     def __init__(self, dataset, data_type, split, format_, resolution, transformations):
         path = os.path.join(SPLIT_DIR, f"{dataset}_{data_type}.csv")
         df = pd.read_csv(path)
-        self.df = df[df["set"] == split]
+        self.df = df[df["set"] == split].reset_index()
         self.dataset = dataset
         self.data_type = data_type
         self.format = format_

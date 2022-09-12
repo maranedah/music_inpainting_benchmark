@@ -53,27 +53,43 @@ class Note():
 
 def to_noteseq(df, ticks_per_note):
     overflow = []
-    groups = df.groupby(by=["track", "measure"]).groups.items()
-    tracks = [[] for x in range(list(groups)[-1][0][0] + 1)]
-    for keys, indexs in groups:    
-        seq = [129 for _ in range(ticks_per_note*4)]
-        for note in  df.loc[indexs,].iterrows():
-            n = Note(note[1], ticks_per_note)
-            noteseq = n.to_noteseq()
-            # if noteseq se paso pal compas del lado
-            i = 0
-            while len(overflow)>0:
-                if i >= ticks_per_note*4:
-                    break
-                else:    
-                    seq[i] = overflow.pop(0)
-                    i+=1
-            for i, ix in enumerate(range(n.rel_pos, n.rel_pos+n.duration)):
-                if ix >= ticks_per_note*4:
-                    overflow.append(noteseq[i])
-                else:
-                    seq[ix] = noteseq[i]
-        tracks[n.track].append(np.array(seq))
+    #groups = df.groupby(by=["track", "measure"]).groups.items()
+    last_measures = df.groupby("track").max()["measure"].tolist()
+    tracks_ids = list(df.groupby("track").groups.keys())
+    tracks = [[] for x in tracks_ids]
+    groups = [range(last_measures[track]+1) for track in tracks_ids]
+    for track_ix, measures in enumerate(groups):
+        track_df = df[df["track"] == track_ix]
+        for m in measures:    
+            seq = [129 for _ in range(ticks_per_note*4)]
+            notes_df = track_df[track_df["measure"] == m]
+            if len(notes_df) <= 0:
+                i = 0
+                while len(overflow)>0:
+                    if i >= ticks_per_note*4:
+                        break
+                    else:    
+                        seq[i] = overflow.pop(0)
+                        i+=1
+            else:
+                for note in notes_df.iterrows():
+                    n = Note(note[1], ticks_per_note)
+                    noteseq = n.to_noteseq()
+                    # if noteseq se paso pal compas del lado
+                    i = 0
+                    while len(overflow)>0:
+                        if i >= ticks_per_note*4:
+                            break
+                        else:    
+                            seq[i] = overflow.pop(0)
+                            i+=1
+                    for i, ix in enumerate(range(n.rel_pos, n.rel_pos+n.duration)):
+                        if ix >= ticks_per_note*4:
+                            overflow.append(noteseq[i])
+                        else:
+                            seq[ix] = noteseq[i]
+                    
+            tracks[track_ix].append(np.array(seq))
     return np.array(tracks, dtype="object")
 
 

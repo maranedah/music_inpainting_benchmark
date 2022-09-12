@@ -11,3 +11,4 @@ dependencies:
     - mlflow==1.27.0
     - pandas==1.4.3
     - tqdm==4.64.0
+    - pytorch_lightning

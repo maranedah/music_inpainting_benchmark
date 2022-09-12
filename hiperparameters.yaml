@@ -115,6 +115,44 @@ sketch_vae:
     name: "MinExponentialLR"
     gamma: 0.9999
     minimum: 0.00001
+  clip_grad: 1.0
+
+sketch_vae_v2:
+  data_type: "measures"
+  format: "noteseq"
+  data_transformations: 
+    - 
+      name: "FixEmptyMeasures"
+      params: []
+    - 
+      name: "Factorize"
+      params:
+        - [1]
+  hidden_dims: 1024
+  zp_dims: 128
+  zr_dims: 128
+  vae_beta: 0.1
+  input_dims: 130
+  pitch_dims: 129
+  rhythm_dims: 3
+  seq_len: 24
+  beat_num: 4
+  tick_num: 6
+  decay: 4000
+  optimizer:
+    name: "AdamW"
+    lr: 0.0001
+  scheduler:
+    name: "CyclicLR"
+    base_lr: 0.0001
+    max_lr: 0.0006
+    step_size_up: 600
+    step_size_down: 2000
+    mode: 'exp_range'
+    gamma: 0.9997
+    cycle_momentum: False
+  clip_grad: 1.0
+
 
 sketchnet_v2:
   data_type: "contexts"

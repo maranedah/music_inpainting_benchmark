@@ -5,9 +5,9 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn import Parameter
 from torch.distributions import kl_divergence, Normal
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import CyclicLR
 
-class SketchVAE(nn.Module):
+class SketchVAE_v2(nn.Module):
     def __init__(
         self, 
         input_dims, 
@@ -21,7 +21,7 @@ class SketchVAE(nn.Module):
         tick_num, 
         decay
     ):
-        super(SketchVAE, self).__init__()
+        super(SketchVAE_v2, self).__init__()
         # pitch_encoder
         self.p_vocab_dims = 10
         self.p_layer_num = 2
@@ -190,19 +190,8 @@ def vae_loss_function(recon, target, p_dis, r_dis, beta):
     acc = torch.sum(correct.float()) / target.size(0)
     return acc, CE + beta * (KLD1 + KLD2)
 
-class MinExponentialLR(ExponentialLR):
-    def __init__(self, optimizer, gamma, minimum, last_epoch=-1):
-        self.min = minimum
-        super(MinExponentialLR, self).__init__(optimizer, gamma, last_epoch=-1)
 
-    def get_lr(self):
-        return [
-            max(base_lr * self.gamma**self.last_epoch, self.min)
-            for base_lr in self.base_lrs
-        ]
-
-
-class LitSketchVAE(SketchVAE, pl.LightningModule):
+class LitSketchVAE_v2(SketchVAE_v2, pl.LightningModule):
     def __init__(
         self,
         input_dims, 
@@ -217,13 +206,11 @@ class LitSketchVAE(SketchVAE, pl.LightningModule):
         decay,
         batch_size,
         optimizer,
-        lr,
         scheduler,
-        gamma,
-        minimum
+
     ):
-        super(SketchVAE, self).__init__()
-        super(LitSketchVAE, self).__init__(
+        super(SketchVAE_v2, self).__init__()
+        super(LitSketchVAE_v2, self).__init__(
             input_dims, 
             p_input_dims, 
             r_input_dims, 
@@ -235,11 +222,9 @@ class LitSketchVAE(SketchVAE, pl.LightningModule):
             tick_num, 
             decay
         )
-        self.lr = lr
         self.batch_size = batch_size
+        self.optimizer = optimizer
         self.scheduler = scheduler
-        self.sch_gamma = gamma
-        self.sch_minimum = minimum
         self.save_hyperparameters()
         self.loss_fn = vae_loss_function 
 
@@ -279,8 +264,22 @@ class LitSketchVAE(SketchVAE, pl.LightningModule):
         return val_loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = MinExponentialLR(optimizer, self.sch_gamma, self.sch_minimum)
+        if self.optimizer.name == "AdamW":
+            optimizer = torch.optim.AdamW(self.parameters(), lr=self.optimizer.lr)
+        elif self.optimizer.name == "Adam":
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.optimizer.lr)
+        
+        if self.scheduler.name == "CyclicLR":
+            scheduler = CyclicLR(
+                optimizer, 
+                base_lr=self.scheduler.base_lr, 
+                max_lr=self.scheduler.max_lr,
+                step_size_up=self.scheduler.step_size_up,
+                step_size_down=self.scheduler.step_size_down,
+                mode=self.scheduler.mode,
+                gamma=self.scheduler.gamma,
+                cycle_momentum=self.scheduler.cycle_momentum,
+            )
         return (
             {
                 "optimizer": optimizer,
